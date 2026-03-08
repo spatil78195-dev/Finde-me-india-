@@ -1,0 +1,278 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Company Panel — Find Me India</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <!-- jsPDF + qrcode.js for client-side PDF label generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    .label-card { border: 2px solid var(--border); border-radius: var(--radius); padding: 16px; text-align: center; }
+    .label-card img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; margin: 0 auto 8px; display: block; }
+    #labelPreviewModal {
+      position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:300;
+      display:flex; align-items:center; justify-content:center;
+    }
+    #labelCanvas { max-width:360px; width:100%; }
+  </style>
+</head>
+<body>
+  <nav id="navbar" class="navbar"></nav>
+
+  <div class="page-header">
+    <div class="container"><h1>📦 Company Panel</h1><p>View assigned verified cases and generate parcel labels for printing.</p></div>
+  </div>
+
+  <div class="container" style="padding:28px 0;">
+    <div id="alertArea" class="mb-3"></div>
+
+    <!-- Stats -->
+    <div class="stats-grid mb-4" style="grid-template-columns:repeat(3,1fr);">
+      <div class="stat-card"><div class="stat-number" id="cTotal">—</div><div class="stat-label">Assigned Cases</div></div>
+      <div class="stat-card"><div class="stat-number" id="cVerified" style="color:var(--accent);">—</div><div class="stat-label">Awaiting Print</div></div>
+      <div class="stat-card"><div class="stat-number" id="cPrinted" style="color:var(--purple);">—</div><div class="stat-label">Printed</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        Assigned Missing Person Cases
+        <span style="font-size:0.8rem;color:var(--text-muted);">Click "Generate Label" to create printable parcel label</span>
+      </div>
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr><th>Person</th><th>Age/Gender</th><th>Last Seen</th><th>Date</th><th>Status</th><th>Actions</th></tr>
+          </thead>
+          <tbody id="companyTbody">
+            <tr><td colspan="6"><div class="loading-center"><div class="spinner" style="border-color:rgba(26,86,219,0.2);border-top-color:var(--primary);"></div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Label Preview Modal -->
+  <div id="labelPreviewModal" class="hidden">
+    <div class="card" style="max-width:440px;width:90vw;">
+      <div class="card-header">
+        📦 Parcel Label Preview
+        <button onclick="closeLabel()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;">âœ•</button>
+      </div>
+      <div class="card-body">
+        <!-- Visual label preview -->
+        <div class="label-preview" id="labelPreviewEl">
+          <div class="label-header">âš ï¸ HAVE YOU SEEN THIS PERSON?</div>
+          <div class="label-content">
+            <img id="lpPhoto" src="" class="label-photo" alt="Photo" onerror="this.src=''" />
+            <div class="label-info">
+              <div class="name" id="lpName"></div>
+              <p id="lpAge"></p>
+              <p id="lpLocation"></p>
+              <p id="lpDate"></p>
+              <p id="lpContact"></p>
+            </div>
+          </div>
+          <div class="label-qr">
+            <div id="lpQrDiv"></div>
+            <div style="font-size:0.7rem;color:#555;">Scan for details</div>
+          </div>
+          <div class="label-helpline" id="lpHelpline"></div>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:16px;">
+          <button onclick="downloadPDF()" class="btn btn-primary" style="flex:1;">â¬‡ï¸ Download PDF</button>
+          <button onclick="markPrinted()" class="btn btn-accent" style="flex:1;" id="markPrintedBtn">📦 Mark Printed</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    const { jsPDF } = window.jspdf;
+    renderNavbar('company');
+    if (!requireRole(['company', 'admin'])) {}
+
+    let currentPerson = null;
+    let cases = [];
+
+    loadCompanyCases();
+
+    async function loadCompanyCases() {
+      try {
+        cases = await api.company.persons();
+        document.getElementById('cTotal').textContent = cases.length;
+        document.getElementById('cVerified').textContent = cases.filter(c => c.status === 'verified').length;
+        document.getElementById('cPrinted').textContent = cases.filter(c => c.status === 'printed').length;
+
+        const tbody = document.getElementById('companyTbody');
+        if (!cases.length) {
+          tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">📦</div><h3>No cases assigned yet</h3><p>The admin will assign verified cases to your company.</p></div></td></tr>`;
+          return;
+        }
+        tbody.innerHTML = cases.map(p => `
+          <tr id="row_${p._id}">
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                ${p.photo ? `<img src="/uploads/${p.photo}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" />` : '<div style="width:40px;height:40px;background:#dbeafe;border-radius:6px;display:flex;align-items:center;justify-content:center;">👤</div>'}
+                <span style="font-weight:600;">${p.name}</span>
+              </div>
+            </td>
+            <td>${p.age} / ${p.gender}</td>
+            <td>📍 ${p.lastSeenLocation}</td>
+            <td>${formatDate(p.date)}</td>
+            <td>${statusBadge(p.status)}</td>
+            <td>
+              <div style="display:flex;gap:6px;">
+                <button class="btn btn-primary btn-sm" onclick="openLabel('${p._id}')">🏷️ Generate Label</button>
+                <a href="/detail.html?id=${p._id}" class="btn btn-ghost btn-sm">👀</a>
+              </div>
+            </td>
+          </tr>`).join('');
+      } catch (e) {
+        showAlert(document.getElementById('alertArea'), e.message);
+      }
+    }
+
+    async function openLabel(id) {
+      currentPerson = cases.find(c => c._id === id);
+      if (!currentPerson) return;
+      const p = currentPerson;
+
+      document.getElementById('lpName').textContent = p.name;
+      document.getElementById('lpAge').textContent = `Age: ${p.age} | ${p.gender}`;
+      document.getElementById('lpLocation').textContent = `📍 ${p.lastSeenLocation}`;
+      document.getElementById('lpDate').textContent = `📅 Last seen: ${formatDate(p.date)}`;
+      document.getElementById('lpContact').textContent = `📞 ${p.contact}`;
+      document.getElementById('lpHelpline').textContent = `🆘 Helpline: ${p.helplineNumber || '1800-180-1234'}`;
+
+      // Photo
+      if (p.photo) {
+        document.getElementById('lpPhoto').src = `/uploads/${p.photo}`;
+      } else {
+        document.getElementById('lpPhoto').src = '';
+      }
+
+      // QR Code
+      const qrDiv = document.getElementById('lpQrDiv');
+      qrDiv.innerHTML = '';
+      if (p.qrCode) {
+        const img = document.createElement('img');
+        img.src = p.qrCode;
+        img.style.width = '80px';
+        img.style.height = '80px';
+        qrDiv.appendChild(img);
+      } else {
+        new QRCode(qrDiv, {
+          text: `${location.origin}/detail.html?id=${p._id}`,
+          width: 80, height: 80
+        });
+      }
+
+      document.getElementById('labelPreviewModal').classList.remove('hidden');
+    }
+
+    function closeLabel() {
+      document.getElementById('labelPreviewModal').classList.add('hidden');
+      currentPerson = null;
+    }
+
+    async function downloadPDF() {
+      if (!currentPerson) return;
+      const p = currentPerson;
+      const doc = new jsPDF({ unit: 'mm', format: 'a6', orientation: 'portrait' });
+
+      // Background
+      doc.setFillColor(26, 86, 219);
+      doc.rect(5, 5, 100, 14, 'F');
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('HAVE YOU SEEN THIS PERSON?', 55, 14, { align: 'center' });
+
+      doc.setTextColor(0, 0, 0);
+
+      // Embed photo if available
+      let photoX = 8;
+      if (p.photo) {
+        try {
+          const photoUrl = `/uploads/${p.photo}`;
+          const imgData = await loadImageAsBase64(photoUrl);
+          const ext = p.photo.split('.').pop().toUpperCase().replace('JPG','JPEG');
+          doc.addImage(imgData, ext === 'PNG' ? 'PNG' : 'JPEG', 8, 22, 35, 42);
+          photoX = 48;
+        } catch { photoX = 8; }
+      }
+
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(p.name, photoX, 27);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.text(`Age: ${p.age} | ${p.gender}`, photoX, 34);
+      doc.text(`Last seen: ${p.lastSeenLocation}`, photoX, 40, { maxWidth: 55 });
+      doc.text(`Date: ${formatDate(p.date)}`, photoX, 50);
+      doc.text(`Contact: ${p.contact}`, photoX, 56);
+
+      // QR code
+      if (p.qrCode) {
+        doc.addImage(p.qrCode, 'PNG', 75, 22, 28, 28);
+        doc.setFontSize(6);
+        doc.text('Scan for Details', 89, 52, { align: 'center' });
+      }
+
+      // Helpline bar
+      doc.setFillColor(239, 68, 68);
+      doc.rect(5, 68, 100, 10, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Helpline: ${p.helplineNumber || '1800-180-1234'} | findmeindia.in`, 55, 74.5, { align: 'center' });
+
+      doc.setTextColor(100, 116, 139);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6);
+      doc.text('Please call if you have any information about this person.', 55, 81, { align: 'center' });
+
+      doc.save(`label_${p.name.replace(/\s+/g, '_')}.pdf`);
+    }
+
+    function loadImageAsBase64(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width; canvas.height = img.height;
+          canvas.getContext('2d').drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/jpeg'));
+        };
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    async function markPrinted() {
+      if (!currentPerson) return;
+      const btn = document.getElementById('markPrintedBtn');
+      btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+      try {
+        await api.company.markPrinted(currentPerson._id);
+        showAlert(document.getElementById('alertArea'), `✅ ${currentPerson.name}'s case marked as Printed!`, 'success');
+        closeLabel();
+        loadCompanyCases();
+      } catch (e) {
+        showAlert(document.getElementById('alertArea'), e.message);
+        btn.innerHTML = '📦 Mark Printed'; btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>
+
+
+

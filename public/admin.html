@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — Find Me India</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <nav id="navbar" class="navbar"></nav>
+
+  <div class="page-header">
+    <div class="container"><h1>⚙️ Admin Panel</h1><p>Manage all missing person cases, assign companies, and view sighting reports.</p></div>
+  </div>
+
+  <div class="container" style="padding:28px 0;">
+    <div class="dashboard-grid">
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-title">Admin Menu</div>
+        <div class="sidebar-link active" id="sideAll" onclick="showSection('all')"><span class="icon">📋</span> All Cases</div>
+        <div class="sidebar-link" id="sidePending" onclick="showSection('pending')"><span class="icon">â³</span> Pending Review</div>
+        <div class="sidebar-link" id="sideVerified" onclick="showSection('verified')"><span class="icon">✅</span> Verified</div>
+        <div class="sidebar-link" id="sidePrinted" onclick="showSection('printed')"><span class="icon">📦</span> Printed</div>
+        <div class="sidebar-link" id="sideFound" onclick="showSection('found')"><span class="icon">🎉</span> Found</div>
+        <div class="sidebar-link" id="sideSightings" onclick="showSection('sightings')"><span class="icon">👁️</span> Sightings</div>
+        <div class="sidebar-link" id="sideUsers" onclick="showSection('users')"><span class="icon">👥</span> Users</div>
+      </div>
+
+      <!-- Main content -->
+      <div>
+        <div id="alertArea" class="mb-3"></div>
+
+        <!-- Stats row -->
+        <div class="stats-grid mb-4" id="adminStats" style="grid-template-columns:repeat(4,1fr);">
+          <div class="stat-card"><div class="stat-number" id="aSTotal">—</div><div class="stat-label">Total</div></div>
+          <div class="stat-card"><div class="stat-number" id="aSPending" style="color:var(--warning);">—</div><div class="stat-label">Pending</div></div>
+          <div class="stat-card"><div class="stat-number" id="aSVerified" style="color:var(--accent);">—</div><div class="stat-label">Verified</div></div>
+          <div class="stat-card"><div class="stat-number" id="aSFound" style="color:var(--accent-dark);">—</div><div class="stat-label">Found</div></div>
+        </div>
+
+        <!-- Cases section -->
+        <div id="sectionCases" class="card">
+          <div class="card-header" id="casesTitle">All Cases</div>
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Person</th>
+                  <th>Age / Gender</th>
+                  <th>Location</th>
+                  <th>Submitted</th>
+                  <th>Status</th>
+                  <th>Company</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="casesTbody">
+                <tr><td colspan="7"><div class="loading-center"><div class="spinner" style="border-color:rgba(26,86,219,0.2);border-top-color:var(--primary);"></div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sightings section -->
+        <div id="sectionSightings" class="card hidden">
+          <div class="card-header">👁️ All Reported Sightings</div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Person</th><th>Location</th><th>Message</th><th>Reporter</th><th>Date</th></tr></thead>
+              <tbody id="sightingsTbody">
+                <tr><td colspan="5"><div class="loading-center"><div class="spinner" style="border-color:rgba(26,86,219,0.2);border-top-color:var(--primary);"></div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Users section -->
+        <div id="sectionUsers" class="card hidden">
+          <div class="card-header">👥 Registered Users</div>
+          <div class="table-container">
+            <table>
+              <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Company</th><th>Joined</th></tr></thead>
+              <tbody id="usersTbody">
+                <tr><td colspan="5"><div class="loading-center"><div class="spinner" style="border-color:rgba(26,86,219,0.2);border-top-color:var(--primary);"></div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Assign company modal -->
+  <div id="assignModal" class="hidden" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:200;display:flex;align-items:center;justify-content:center;">
+    <div class="card" style="min-width:360px;max-width:90vw;">
+      <div class="card-header">Assign to Company <button onclick="closeModal()" style="background:none;border:none;cursor:pointer;font-size:1.2rem;">âœ•</button></div>
+      <div class="card-body">
+        <div class="form-group">
+          <label class="form-label">Select Company</label>
+          <select id="companySelect" class="form-control"><option value="">— No company —</option></select>
+        </div>
+        <input type="hidden" id="assignPersonId" />
+        <button class="btn btn-primary btn-block" onclick="doAssign()">Assign</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    renderNavbar('admin');
+    if (!requireRole(['admin'])) {}
+
+    let companies = [];
+    let currentSection = 'all';
+
+    init();
+    async function init() {
+      await loadStats();
+      companies = await api.admin.companies().catch(() => []);
+      loadCases();
+    }
+
+    async function loadStats() {
+      try {
+        const s = await api.persons.stats();
+        document.getElementById('aSTotal').textContent = s.total;
+        document.getElementById('aSPending').textContent = s.total - s.verified - s.found;
+        document.getElementById('aSVerified').textContent = s.verified;
+        document.getElementById('aSFound').textContent = s.found;
+      } catch {}
+    }
+
+    function showSection(sec) {
+      currentSection = sec;
+      ['all','pending','verified','printed','found','sightings','users'].forEach(s => {
+        document.getElementById('side' + s.charAt(0).toUpperCase() + s.slice(1))?.classList.toggle('active', s === sec);
+      });
+      document.getElementById('sectionCases').classList.toggle('hidden', ['sightings','users'].includes(sec));
+      document.getElementById('sectionSightings').classList.toggle('hidden', sec !== 'sightings');
+      document.getElementById('sectionUsers').classList.toggle('hidden', sec !== 'users');
+
+      if (sec === 'sightings') { loadSightings(); return; }
+      if (sec === 'users') { loadUsers(); return; }
+      loadCases(sec === 'all' ? '' : `?status=${sec}`);
+    }
+
+    async function loadCases(q = '') {
+      const tbody = document.getElementById('casesTbody');
+      tbody.innerHTML = `<tr><td colspan="7"><div class="loading-center"><div class="spinner" style="border-color:rgba(26,86,219,0.2);border-top-color:var(--primary);"></div></div></td></tr>`;
+      try {
+        const cases = await api.admin.persons(q);
+        if (!cases.length) {
+          tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="icon">📁</div><h3>No cases found</h3></div></td></tr>`;
+          return;
+        }
+        tbody.innerHTML = cases.map(p => `
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                ${p.photo ? `<img src="/uploads/${p.photo}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;" />` : '<div style="width:36px;height:36px;background:#dbeafe;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:1rem;">👤</div>'}
+                <div>
+                  <div style="font-weight:600;">${p.name}</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);">by ${p.addedBy?.name || 'Unknown'}</div>
+                </div>
+              </div>
+            </td>
+            <td>${p.age} / ${p.gender}</td>
+            <td style="max-width:160px;word-break:break-word;">📍 ${p.lastSeenLocation}</td>
+            <td>${formatDate(p.createdAt)}</td>
+            <td>${statusBadge(p.status)}</td>
+            <td>
+              <span style="font-size:0.82rem;color:var(--text-muted);">${p.assignedCompany?.companyName || p.assignedCompany?.name || '—'}</span>
+            </td>
+            <td>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                <a href="/detail.html?id=${p._id}" class="btn btn-ghost btn-sm">👀</a>
+                ${p.status === 'pending' ? `<button class="btn btn-accent btn-sm" onclick="setStatus('${p._id}','verified')">✅</button>` : ''}
+                ${p.status !== 'found' ? `<button class="btn btn-sm" style="background:#15803d;color:#fff;" onclick="setStatus('${p._id}','found')">🎉</button>` : ''}
+                ${p.status === 'pending' ? `<button class="btn btn-ghost btn-sm" onclick="setStatus('${p._id}','pending')">â†©</button>` : ''}
+                <button class="btn btn-sm" style="background:var(--purple);color:#fff;" onclick="openAssign('${p._id}')">🏢</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteCase('${p._id}')">🗑️</button>
+              </div>
+            </td>
+          </tr>`).join('');
+      } catch (e) {
+        showAlert(document.getElementById('alertArea'), e.message);
+      }
+    }
+
+    async function setStatus(id, status) {
+      try {
+        await api.admin.setStatus(id, status);
+        loadCases(currentSection !== 'all' ? `?status=${currentSection}` : '');
+        loadStats();
+      } catch (e) { showAlert(document.getElementById('alertArea'), e.message); }
+    }
+
+    async function deleteCase(id) {
+      if (!confirm('Delete this case? This cannot be undone.')) return;
+      try {
+        await api.admin.delete(id);
+        loadCases(currentSection !== 'all' ? `?status=${currentSection}` : '');
+        loadStats();
+      } catch (e) { showAlert(document.getElementById('alertArea'), e.message); }
+    }
+
+    function openAssign(id) {
+      document.getElementById('assignPersonId').value = id;
+      const sel = document.getElementById('companySelect');
+      sel.innerHTML = '<option value="">— No company —</option>' +
+        companies.map(c => `<option value="${c._id}">${c.companyName || c.name}</option>`).join('');
+      document.getElementById('assignModal').classList.remove('hidden');
+    }
+    function closeModal() { document.getElementById('assignModal').classList.add('hidden'); }
+
+    async function doAssign() {
+      const id = document.getElementById('assignPersonId').value;
+      const companyId = document.getElementById('companySelect').value;
+      try {
+        await api.admin.assign(id, companyId);
+        closeModal();
+        loadCases(currentSection !== 'all' ? `?status=${currentSection}` : '');
+        showAlert(document.getElementById('alertArea'), 'Company assigned successfully!', 'success');
+      } catch (e) { showAlert(document.getElementById('alertArea'), e.message); }
+    }
+
+    async function loadSightings() {
+      const tbody = document.getElementById('sightingsTbody');
+      try {
+        const s = await api.admin.sightings();
+        if (!s.length) { tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state"><div class="icon">👁️</div><h3>No sightings reported</h3></div></td></tr>`; return; }
+        tbody.innerHTML = s.map(r => `
+          <tr>
+            <td><a href="/detail.html?id=${r.personId?._id}" style="color:var(--primary);font-weight:600;">${r.personId?.name || '—'}</a></td>
+            <td>${r.location}</td>
+            <td>${r.message || '—'}</td>
+            <td>${r.reporterName || r.reportedBy?.name || 'Anonymous'}</td>
+            <td>${formatDate(r.createdAt)}</td>
+          </tr>`).join('');
+      } catch (e) { tbody.innerHTML = `<tr><td colspan="5"><div class="alert alert-error">${e.message}</div></td></tr>`; }
+    }
+
+    async function loadUsers() {
+      const tbody = document.getElementById('usersTbody');
+      try {
+        const users = await api.admin.users();
+        tbody.innerHTML = users.map(u => `
+          <tr>
+            <td style="font-weight:600;">${u.name}</td>
+            <td>${u.email}</td>
+            <td>${statusBadge(u.role)}</td>
+            <td>${u.companyName || '—'}</td>
+            <td>${formatDate(u.createdAt)}</td>
+          </tr>`).join('');
+      } catch (e) { tbody.innerHTML = `<tr><td colspan="5"><div class="alert alert-error">${e.message}</div></td></tr>`; }
+    }
+  </script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Find Me India — Missing People Awareness</title>
+  <meta name="description" content="Find missing people through e-commerce parcel labels. Help reunite families by printing missing person information on packages." />
+  <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .recent-section { padding: 50px 0; }
+    .section-title { font-size: 1.7rem; font-weight: 800; margin-bottom: 6px; }
+    .section-sub { color: var(--text-muted); margin-bottom: 28px; }
+  </style>
+</head>
+<body>
+  <nav id="navbar" class="navbar"></nav>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-badge">🇮🇳 Made for India · National Initiative</div>
+        <h1>Finding the <span>Missing</span><br/>Through Every Parcel</h1>
+        <p>We print missing person information on e-commerce delivery packages — turning every shipment into a search effort. Help reunite families across India.</p>
+        <div class="hero-actions">
+          <a href="/add-person.html" class="btn btn-lg" style="background:#fff;color:var(--primary);">📝 Report Missing Person</a>
+          <a href="#cases" class="btn btn-lg btn-outline" style="border-color:rgba(255,255,255,0.5);color:#fff;">🔍 Search Cases</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Stats -->
+  <section class="section-sm" style="background:#fff; border-bottom:1px solid var(--border);">
+    <div class="container">
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card fade-in">
+          <div class="stat-number" id="statTotal">—</div>
+          <div class="stat-label">Total Cases</div>
+        </div>
+        <div class="stat-card fade-in delay-1">
+          <div class="stat-number" id="statVerified" style="color:var(--accent);">—</div>
+          <div class="stat-label">Verified Cases</div>
+        </div>
+        <div class="stat-card fade-in delay-2">
+          <div class="stat-number" id="statPrinted" style="color:var(--purple);">—</div>
+          <div class="stat-label">Labels Printed</div>
+        </div>
+        <div class="stat-card fade-in delay-3">
+          <div class="stat-number" id="statFound" style="color:var(--accent-dark);">—</div>
+          <div class="stat-label">People Found 🎉</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Flow diagram -->
+  <section class="flow-section">
+    <div class="container">
+      <div class="text-center mb-4">
+        <h2 class="section-title">How It Works</h2>
+        <p class="section-sub">A simple but powerful process to spread awareness</p>
+      </div>
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#1a56db;">📝</div>
+          <div class="flow-label">Missing Person Data</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#7c3aed;">🖥️</div>
+          <div class="flow-label">Our Platform</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#0891b2;">✅</div>
+          <div class="flow-label">Admin Verification</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#059669;">🏢</div>
+          <div class="flow-label">Company Partner</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#d97706;">📦</div>
+          <div class="flow-label">Parcel Printing</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#dc2626;">🚚</div>
+          <div class="flow-label">Delivery</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#15803d;">👁️</div>
+          <div class="flow-label">Public Awareness</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-icon" style="background:#be185d;">❤️</div>
+          <div class="flow-label">Reunited Family</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Search & Cases -->
+  <section class="recent-section" id="cases">
+    <div class="container">
+      <div class="text-center mb-4">
+        <h2 class="section-title">Active Missing Cases</h2>
+        <p class="section-sub">Search by name or last seen location. Click any card for details.</p>
+      </div>
+      <div class="search-bar mb-4" style="max-width:600px; margin:0 auto 32px;">
+        <input type="text" id="searchInput" placeholder="Search by name or location…" />
+        <button onclick="searchPersons()">🔍 Search</button>
+      </div>
+      <div id="personsGrid" class="grid grid-persons">
+        <div class="loading-center" style="grid-column:1/-1;">
+          <div class="spinner" style="border-color:rgba(26,86,219,0.2);border-top-color:var(--primary);width:36px;height:36px;border-width:4px;"></div>
+          <span>Loading cases…</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section style="background:linear-gradient(135deg,#1a56db,#7c3aed); padding:60px 0; text-align:center; color:#fff;">
+    <div class="container">
+      <h2 style="font-size:2rem;font-weight:800;margin-bottom:12px;">Want to become a partner company?</h2>
+      <p style="opacity:0.85;margin-bottom:28px;font-size:1.05rem;">Register your e-commerce company and start printing missing person labels on your packages.</p>
+      <a href="/login.html?tab=signup&role=company" class="btn btn-lg" style="background:#fff;color:var(--primary);">Register as Company</a>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container">
+      <div class="footer-grid">
+        <div>
+          <div class="footer-brand">🔍 Find Me India</div>
+          <p class="footer-desc">Using the power of e-commerce logistics to spread awareness about missing people across India. Every parcel is a chance to bring someone home.</p>
+          <p class="footer-desc" style="margin-top: 12px; font-weight: 600; color: #94a3b8;">Owner by Sunil Patil</p>
+        </div>
+        <div>
+          <div class="footer-title">Quick Links</div>
+          <div class="footer-links">
+            <a href="/index.html">Home</a>
+            <a href="/add-person.html">Report Missing</a>
+            <a href="/login.html">Login</a>
+          </div>
+        </div>
+        <div>
+          <div class="footer-title">Emergency</div>
+          <div class="footer-links">
+            <a href="#">Helpline: 1800-180-1234</a>
+            <a href="#">Police: 100</a>
+            <a href="#">Missing Child: 1098</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">© 2026 Find Me India · Bringing Families Together</div>
+    </div>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script>
+    renderNavbar('home');
+    loadStats();
+    loadPersons();
+
+    async function loadStats() {
+      try {
+        const s = await api.persons.stats();
+        document.getElementById('statTotal').textContent = s.total;
+        document.getElementById('statVerified').textContent = s.verified;
+        document.getElementById('statPrinted').textContent = s.printed;
+        document.getElementById('statFound').textContent = s.found;
+      } catch {}
+    }
+
+    async function loadPersons(search = '') {
+      const grid = document.getElementById('personsGrid');
+      grid.innerHTML = `<div class="loading-center" style="grid-column:1/-1;"><div class="spinner" style="border-color:rgba(26,86,219,0.2);border-top-color:var(--primary);width:36px;height:36px;border-width:4px;"></div><span>Loading…</span></div>`;
+      try {
+        const q = search ? `?search=${encodeURIComponent(search)}` : '';
+        const persons = await api.persons.list(q);
+        if (!persons.length) {
+          grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">🔍</div><h3>No active cases found</h3><p>Be the first to report a missing person.</p><a href="/add-person.html" class="btn btn-primary mt-3">Report Now</a></div>`;
+          return;
+        }
+        grid.innerHTML = persons.map(p => `
+          <div class="card person-card fade-in" onclick="location.href='/detail.html?id=${p._id}'">
+            <div class="person-card-img">
+              ${p.photo ? `<img src="/uploads/${p.photo}" alt="${p.name}" />` : '👤'}
+            </div>
+            <div class="person-card-body">
+              <div class="flex-between mb-2">
+                <div class="person-card-name">${p.name}</div>
+                ${statusBadge(p.status)}
+              </div>
+              <div class="person-card-meta">
+                <span>🎂 Age: ${p.age} • ${p.gender}</span>
+                <span>📍 ${p.lastSeenLocation}</span>
+                <span>📅 ${formatDate(p.date)}</span>
+              </div>
+              <a href="/detail.html?id=${p._id}" class="btn btn-outline btn-sm w-full mt-3">View Details →</a>
+            </div>
+          </div>`).join('');
+      } catch (e) {
+        grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1;"><div class="icon">⚠️</div><h3>Failed to load cases</h3><p>${e.message}</p></div>`;
+      }
+    }
+
+    function searchPersons() {
+      const q = document.getElementById('searchInput').value;
+      loadPersons(q);
+    }
+    document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') searchPersons(); });
+  </script>
+</body>
+</html>
+
+
+

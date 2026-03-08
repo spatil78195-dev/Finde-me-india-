@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Dashboard — Find Me India</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <nav id="navbar" class="navbar"></nav>
+
+  <div class="page-header">
+    <div class="container">
+      <h1>📋 My Dashboard</h1>
+      <p>Track the status of cases you have submitted.</p>
+    </div>
+  </div>
+
+  <div class="container" style="padding-top:28px;">
+    <div id="alertArea"></div>
+
+    <!-- Summary cards -->
+    <div class="stats-grid mb-4" id="myStats">
+      <div class="stat-card"><div class="stat-number" id="myTotal">—</div><div class="stat-label">Total Submitted</div></div>
+      <div class="stat-card"><div class="stat-number" id="myPending" style="color:var(--warning);">—</div><div class="stat-label">Pending</div></div>
+      <div class="stat-card"><div class="stat-number" id="myVerified" style="color:var(--accent);">—</div><div class="stat-label">Verified</div></div>
+      <div class="stat-card"><div class="stat-number" id="myFound" style="color:var(--accent-dark);">—</div><div class="stat-label">Found 🎉</div></div>
+    </div>
+
+    <div class="flex-between mb-3">
+      <h2 style="font-size:1.2rem;font-weight:700;">My Submitted Cases</h2>
+      <a href="/add-person.html" class="btn btn-primary btn-sm">➕ Add New Case</a>
+    </div>
+
+    <div class="card">
+      <div class="table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Age / Gender</th>
+              <th>Last Seen</th>
+              <th>Date</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="casesTable">
+            <tr><td colspan="6"><div class="loading-center"><div class="spinner" style="border-color:rgba(26,86,219,0.2);border-top-color:var(--primary);"></div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    renderNavbar('dashboard');
+    if (!requireAuth()) {}
+    loadMyCases();
+
+    async function loadMyCases() {
+      try {
+        const cases = await api.persons.my();
+        // Stats
+        document.getElementById('myTotal').textContent = cases.length;
+        document.getElementById('myPending').textContent = cases.filter(c => c.status === 'pending').length;
+        document.getElementById('myVerified').textContent = cases.filter(c => ['verified','printed'].includes(c.status)).length;
+        document.getElementById('myFound').textContent = cases.filter(c => c.status === 'found').length;
+
+        const tbody = document.getElementById('casesTable');
+        if (!cases.length) {
+          tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">📋</div><h3>No cases submitted yet</h3><p>Add your first missing person report.</p><a href="/add-person.html" class="btn btn-primary mt-3">Report Now</a></div></td></tr>`;
+          return;
+        }
+        tbody.innerHTML = cases.map(p => `
+          <tr>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                ${p.photo ? `<img src="/uploads/${p.photo}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;" />` : '<div style="width:36px;height:36px;background:#dbeafe;border-radius:6px;display:flex;align-items:center;justify-content:center;">👤</div>'}
+                <span style="font-weight:600;">${p.name}</span>
+              </div>
+            </td>
+            <td>${p.age} / ${p.gender}</td>
+            <td>📍 ${p.lastSeenLocation}</td>
+            <td>${formatDate(p.date)}</td>
+            <td>${statusBadge(p.status)}</td>
+            <td>
+              <a href="/detail.html?id=${p._id}" class="btn btn-ghost btn-sm">View →</a>
+            </td>
+          </tr>`).join('');
+      } catch (e) {
+        showAlert(document.getElementById('alertArea'), e.message);
+      }
+    }
+  </script>
+</body>
+</html>
+
+

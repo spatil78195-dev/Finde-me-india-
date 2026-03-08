@@ -1,0 +1,156 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Report Sighting — Find Me India</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+
+<body>
+  <nav id="navbar" class="navbar"></nav>
+
+  <div class="page-header">
+    <div class="container">
+      <h1>👁️ Report a Sighting</h1>
+      <p id="pageSubtitle">Provide details about where you saw this person.</p>
+    </div>
+  </div>
+
+  <div class="container" style="padding-top:32px; max-width:700px;">
+    <div id="alertArea"></div>
+
+    <!-- Person info card -->
+    <div id="personCard" class="card mb-4 hidden">
+      <div class="card-body">
+        <div style="display:flex;align-items:center;gap:16px;">
+          <div id="personCardPhoto"
+            style="width:64px;height:64px;border-radius:10px;overflow:hidden;background:#dbeafe;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;">
+            👤</div>
+          <div>
+            <div style="font-weight:700;font-size:1.1rem;" id="personCardName">—</div>
+            <div style="font-size:0.85rem;color:var(--text-muted);" id="personCardMeta">—</div>
+          </div>
+          <div id="personCardStatus" style="margin-left:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">Sighting Report Form</div>
+      <div class="card-body">
+        <form id="sightingForm" onsubmit="handleReport(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Your Name</label>
+              <input type="text" id="reporterName" class="form-control" placeholder="Your full name" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Your Phone</label>
+              <input type="tel" id="reporterPhone" class="form-control" placeholder="10-digit number" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Location Where You Saw Them *</label>
+            <input type="text" id="location" class="form-control" placeholder="e.g. Near Rajiv Chowk Metro, New Delhi"
+              required />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Additional Details</label>
+            <textarea id="message" class="form-control"
+              placeholder="What were they wearing? What were they doing? Any other helpful info…" rows="4"></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Upload Photo (optional)</label>
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('sightingPhoto').click()">
+              <input type="file" id="sightingPhoto" accept="image/*" onchange="previewPhoto(event)" />
+              <div id="uploadPlaceholder">
+                <div style="font-size:2rem;margin-bottom:6px;">📷</div>
+                <div style="font-weight:600;font-size:0.9rem;">Click to upload a photo of the sighting</div>
+              </div>
+              <img id="photoPreview" class="upload-preview hidden" alt="Preview" />
+            </div>
+          </div>
+          <div class="alert alert-info">
+            â„¹ï¸ Your report will be reviewed by our admin team. Please only report genuine sightings.
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg btn-block" id="reportBtn">📤 Submit Sighting
+            Report</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    renderNavbar();
+    const personId = getParamId();
+
+    if (personId) {
+      loadPersonInfo(personId);
+    } else {
+      document.getElementById('alertArea').innerHTML = `<div class="alert alert-error">No person ID provided. <a href="/index.html">Go to home</a></div>`;
+    }
+
+    async function loadPersonInfo(id) {
+      try {
+        const p = await api.persons.get(id);
+        document.getElementById('pageSubtitle').textContent = `Have you seen ${p.name}? Please fill in the details below.`;
+        document.getElementById('personCardName').textContent = p.name;
+        document.getElementById('personCardMeta').textContent = `${p.age} yrs · ${p.gender} · Last seen: ${p.lastSeenLocation}`;
+        document.getElementById('personCardStatus').innerHTML = statusBadge(p.status);
+        if (p.photo) {
+          document.getElementById('personCardPhoto').innerHTML = `<img src="/uploads/${p.photo}" style="width:100%;height:100%;object-fit:cover;" />`;
+        }
+        document.getElementById('personCard').classList.remove('hidden');
+      } catch { }
+    }
+
+    function previewPhoto(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const preview = document.getElementById('photoPreview');
+        preview.src = ev.target.result;
+        preview.classList.remove('hidden');
+        document.getElementById('uploadPlaceholder').classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function handleReport(e) {
+      e.preventDefault();
+      if (!personId) return;
+      const btn = document.getElementById('reportBtn');
+      btn.innerHTML = '<span class="spinner"></span> Submitting…'; btn.disabled = true;
+
+      const fd = new FormData();
+      fd.append('location', document.getElementById('location').value);
+      fd.append('message', document.getElementById('message').value);
+      fd.append('reporterName', document.getElementById('reporterName').value);
+      fd.append('reporterPhone', document.getElementById('reporterPhone').value);
+      const photo = document.getElementById('sightingPhoto').files[0];
+      if (photo) fd.append('photo', photo);
+
+      try {
+        await api.sightings.report(personId, fd);
+        document.getElementById('alertArea').innerHTML = `
+          <div class="alert alert-success">
+            ✅ <strong>Sighting reported successfully!</strong> Our admin team will review it. Thank you for helping!
+          </div>`;
+        document.getElementById('sightingForm').reset();
+        document.getElementById('photoPreview').classList.add('hidden');
+        document.getElementById('uploadPlaceholder').classList.remove('hidden');
+        btn.innerHTML = '✅ Submitted';
+        setTimeout(() => { location.href = `/detail.html?id=${personId}`; }, 2200);
+      } catch (err) {
+        showAlert(document.getElementById('alertArea'), err.message);
+        btn.innerHTML = '📤 Submit Sighting Report'; btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+
+</html>

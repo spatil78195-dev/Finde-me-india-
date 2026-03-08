@@ -1,0 +1,160 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Missing Person Details — Find Me India</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    .qr-box { text-align:center; padding:16px; background:#f8fafc; border-radius:var(--radius); border:1px solid var(--border); }
+    .qr-box img { max-width:160px; margin:0 auto; }
+    .sightings-list { list-style:none; }
+    .sighting-item { background:#f8fafc; border-radius:var(--radius-sm); padding:14px; margin-bottom:10px; border:1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <nav id="navbar" class="navbar"></nav>
+
+  <div id="pageContent">
+    <div class="loading-center"><div class="spinner" style="border-color:rgba(26,86,219,0.2);border-top-color:var(--primary);width:40px;height:40px;border-width:4px;"></div><span>Loading details…</span></div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="/js/api.js"></script>
+  <script>
+    renderNavbar();
+    const id = getParamId();
+    if (!id) { document.getElementById('pageContent').innerHTML = `<div class="container"><div class="alert alert-error mt-4">No person ID provided.</div></div>`; }
+    else loadPerson(id);
+
+    async function loadPerson(id) {
+      try {
+        const p = await api.persons.get(id);
+        renderPerson(p);
+        loadSightings(id);
+      } catch (e) {
+        document.getElementById('pageContent').innerHTML = `<div class="container"><div class="alert alert-error mt-4">${e.message}</div></div>`;
+      }
+    }
+
+    function renderPerson(p) {
+      const photoHtml = p.photo
+        ? `<img src="/uploads/${p.photo}" class="detail-photo" alt="${p.name}" />`
+        : `<div class="detail-photo-placeholder">👤</div>`;
+
+      document.title = `${p.name} — Find Me India`;
+      document.getElementById('pageContent').innerHTML = `
+        <div class="page-header">
+          <div class="container">
+            <div class="flex-between" style="flex-wrap:wrap;gap:12px;">
+              <div>
+                <h1>${p.name}</h1>
+                <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">${statusBadge(p.status)}</div>
+              </div>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button onclick="window.print()" class="btn btn-ghost btn-sm" style="background:rgba(255,255,255,0.15);color:#fff;border-color:rgba(255,255,255,0.3);">🖨️ Print</button>
+                <a href="/report.html?id=${p._id}" class="btn btn-sm" style="background:#ef4444;color:#fff;">👁️ Report Sighting</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="container">
+          <div class="detail-layout">
+            <!-- Left: Photo + QR -->
+            <div>
+              ${photoHtml}
+              <div class="qr-box mt-3">
+                <p style="font-size:0.8rem;font-weight:600;margin-bottom:10px;color:var(--text-muted);">📱 SCAN QR FOR DETAILS</p>
+                ${p.qrCode ? `<img src="${p.qrCode}" alt="QR Code" />` : '<p class="text-muted">QR not generated</p>'}
+                <p style="font-size:0.72rem;color:var(--text-muted);margin-top:8px;">Share this QR code to spread awareness</p>
+              </div>
+              <div style="margin-top:16px;display:flex;gap:10px;">
+                <a href="tel:${p.contact}" class="btn btn-accent btn-sm" style="flex:1;">📞 Call Family</a>
+                <a href="tel:${p.helplineNumber || '1800180234'}" class="btn btn-outline btn-sm" style="flex:1;">🆘 Helpline</a>
+              </div>
+            </div>
+
+            <!-- Right: Details -->
+            <div>
+              <div class="card mb-3">
+                <div class="card-header">Personal Information</div>
+                <div class="card-body">
+                  <div class="grid grid-2 gap-4">
+                    <div class="detail-field"><div class="detail-field-label">Full Name</div><div class="detail-field-value">${p.name}</div></div>
+                    <div class="detail-field"><div class="detail-field-label">Age</div><div class="detail-field-value">${p.age} years</div></div>
+                    <div class="detail-field"><div class="detail-field-label">Gender</div><div class="detail-field-value">${p.gender}</div></div>
+                    <div class="detail-field"><div class="detail-field-label">Date Last Seen</div><div class="detail-field-value">${formatDate(p.date)}</div></div>
+                    <div class="detail-field" style="grid-column:1/-1;"><div class="detail-field-label">Last Seen Location</div><div class="detail-field-value">📍 ${p.lastSeenLocation}</div></div>
+                    <div class="detail-field"><div class="detail-field-label">Contact Number</div><div class="detail-field-value">📞 <a href="tel:${p.contact}" style="color:var(--primary);">${p.contact}</a></div></div>
+                    <div class="detail-field"><div class="detail-field-label">Helpline</div><div class="detail-field-value">🆘 ${p.helplineNumber || '1800-180-1234'}</div></div>
+                    ${p.description ? `<div class="detail-field" style="grid-column:1/-1;"><div class="detail-field-label">Description</div><div class="detail-field-value">${p.description}</div></div>` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <div class="card mb-3">
+                <div class="card-header">📍 Last Seen Location Map</div>
+                <div class="card-body" style="padding:16px;">
+                  <div id="map"></div>
+                  <p style="font-size:0.78rem;color:var(--text-muted);margin-top:8px;">Approximate area Â· ${p.lastSeenLocation}</p>
+                </div>
+              </div>
+
+              <div class="card" id="sightingsCard">
+                <div class="card-header">👁️ Reported Sightings <span id="sightingsCount" class="badge badge-verified">0</span></div>
+                <div class="card-body">
+                  <div id="sightingsList"><p class="text-muted" style="font-size:0.9rem;">No sightings reported yet.</p></div>
+                  <a href="/report.html?id=${p._id}" class="btn btn-primary btn-sm mt-3">+ Report a Sighting</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+      // Init Leaflet map
+      setTimeout(() => {
+        const map = L.map('map').setView([20.5937, 78.9629], 5); // India center
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: 'Â© OpenStreetMap'
+        }).addTo(map);
+
+        // Geocode location
+        fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(p.lastSeenLocation + ', India')}&format=json&limit=1`)
+          .then(r => r.json())
+          .then(results => {
+            if (results.length) {
+              const { lat, lon } = results[0];
+              map.setView([lat, lon], 13);
+              L.marker([lat, lon])
+                .addTo(map)
+                .bindPopup(`<b>${p.name}</b><br>Last seen here<br>${formatDate(p.date)}`)
+                .openPopup();
+            }
+          }).catch(() => {});
+      }, 300);
+    }
+
+    async function loadSightings(personId) {
+      try {
+        const sightings = await api.sightings.forPerson(personId);
+        document.getElementById('sightingsCount').textContent = sightings.length;
+        if (!sightings.length) return;
+        document.getElementById('sightingsList').innerHTML = sightings.map(s => `
+          <div class="sighting-item">
+            <div style="font-weight:600;">📍 ${s.location}</div>
+            ${s.message ? `<p style="margin-top:4px;font-size:0.9rem;">${s.message}</p>` : ''}
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:6px;">
+              Reported by ${s.reporterName || 'Anonymous'} · ${formatDate(s.createdAt)}
+            </div>
+            ${s.photo ? `<img src="/uploads/${s.photo}" style="max-height:120px;border-radius:6px;margin-top:8px;" />` : ''}
+          </div>`).join('');
+      } catch {}
+    }
+  </script>
+</body>
+</html>
+
+
+

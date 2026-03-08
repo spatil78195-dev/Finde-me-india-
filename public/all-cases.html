@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Print Cases — Find Me India</title>
+  <link rel="stylesheet" href="/css/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    /* Print-specific layout */
+    .print-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    .print-card {
+      display: flex;
+      border: 3px solid #1a56db;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+      background: #fff;
+      page-break-inside: avoid; /* Prevents splitting across pages when printing */
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .print-photo {
+      width: 140px;
+      height: 180px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      flex-shrink: 0;
+    }
+    
+    .print-photo-placeholder {
+      width: 140px;
+      height: 180px;
+      background: #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      font-size: 3rem;
+      color: #94a3b8;
+      border: 1px dashed #cbd5e1;
+      flex-shrink: 0;
+    }
+
+    .print-details {
+      flex: 1;
+      padding-left: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .print-header {
+      color: #ef4444;
+      font-weight: 900;
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .print-name {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    
+    .print-info p {
+      margin: 4px 0;
+      font-size: 1.05rem;
+    }
+
+    .print-info strong {
+      color: #334155;
+    }
+
+    .print-qr {
+      width: 90px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      flex-shrink: 0;
+      padding-left: 10px;
+    }
+
+    .print-qr-img {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 4px;
+    }
+    
+    .print-qr span {
+      font-size: 0.75rem;
+      color: #64748b;
+      text-align: center;
+    }
+    
+    .helpline-banner {
+      background: #ef4444;
+      color: #fff;
+      text-align: center;
+      padding: 6px;
+      border-radius: 6px;
+      font-weight: 700;
+      margin-top: auto;
+    }
+
+    /* Hide elements during print */
+    @media print {
+      body { background: #fff; }
+      nav, .page-header, .print-btn-container, footer { display: none !important; }
+      .print-container { padding: 0; max-width: 100%; margin: 0; }
+      .print-card { box-shadow: none; border: 2px solid #000; break-inside: avoid; }
+      .helpline-banner { background: #000 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .print-header { color: #000 !important; }
+    }
+  </style>
+</head>
+<body>
+  <nav id="navbar" class="navbar"></nav>
+
+  <div class="page-header">
+    <div class="container">
+      <h1>🖨️ Print Active Cases</h1>
+      <p>A print-friendly list of all verified missing person cases for labels and distribution.</p>
+    </div>
+  </div>
+
+  <div class="container print-btn-container" style="text-align: center; padding: 20px 0;">
+    <button class="btn btn-primary btn-lg" onclick="window.print()">
+      🖨️ Print All Cases Now
+    </button>
+  </div>
+
+  <div class="print-container" id="printList">
+    <div class="loading-center">
+      <div class="spinner" style="border-color:rgba(26,86,219,0.2);border-top-color:var(--primary);width:36px;height:36px;border-width:4px;"></div>
+      <span>Loading cases…</span>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    renderNavbar('all-cases');
+    // Require login so that only authenticated users (citizens, companies, etc) can see it
+    if (!requireAuth()) {}
+
+    loadAllCases();
+
+    async function loadAllCases() {
+      const container = document.getElementById('printList');
+      try {
+        const persons = await api.persons.list('?status=all'); // Load ALL cases including pending
+        if (!persons.length) {
+          container.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><h3>No cases available for printing</h3></div>`;
+          return;
+        }
+
+        container.innerHTML = persons.map(p => `
+          <div class="print-card">
+            ${p.photo ? 
+              `<img src="/uploads/${p.photo}" class="print-photo" alt="${p.name}" onerror="this.src='';" />` : 
+              `<div class="print-photo-placeholder">👤</div>`
+            }
+            <div class="print-details">
+              <div class="print-header">⚠️ HAVE YOU SEEN THIS PERSON?</div>
+              <div class="print-name">${p.name}</div>
+              <div class="print-info">
+                <p><strong>Age / Gender:</strong> ${p.age} • ${p.gender}</p>
+                <p><strong>Last Seen:</strong> ${p.lastSeenLocation}</p>
+                <p><strong>Date:</strong> ${formatDate(p.date)}</p>
+                <p><strong>Contact:</strong> ${p.contact}</p>
+                <p><strong>Status:</strong> ${p.status.toUpperCase()}</p>
+              </div>
+              <div class="helpline-banner">
+                🆘 Helpline: ${p.helplineNumber || '1800-180-1234'} | findmeindia.in
+              </div>
+            </div>
+            <div class="print-qr">
+              ${p.qrCode ? 
+                `<img src="${p.qrCode}" class="print-qr-img" />` : 
+                `<div id="qr_${p._id}"></div>`
+              }
+              <span>Scan for Details</span>
+            </div>
+          </div>
+        `).join('');
+
+        // Generate QRs for any missing ones locally (fallback mechanism)
+        persons.forEach(p => {
+          if (!p.qrCode) {
+            new QRCode(document.getElementById(`qr_${p._id}`), {
+              text: `${window.location.origin}/detail.html?id=${p._id}`,
+              width: 80, height: 80
+            });
+            // fix styles inside the generated div
+            const qrDiv = document.getElementById(`qr_${p._id}`);
+            if (qrDiv && qrDiv.querySelector('img')) {
+               qrDiv.querySelector('img').classList.add('print-qr-img');
+            }
+          }
+        });
+
+      } catch (e) {
+        container.innerHTML = `<div class="alert alert-error">Failed to load cases: ${e.message}</div>`;
+      }
+    }
+  </script>
+</body>
+</html>
