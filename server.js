@@ -53,10 +53,20 @@ app.listen(PORT, () => {
 // Disable mongoose buffering so errors appear instantly instead of timing out
 mongoose.set('bufferCommands', false);
 
-mongoose.connect(process.env.MONGODB_URI)
+const mongoURI = process.env.MONGODB_URI || "mongodb://localhost:27017/findmeindia";
+
+mongoose.connect(mongoURI, {
+  serverSelectionTimeoutMS: 15000, // Timeout after 15s instead of 30s
+  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+})
   .then(() => console.log('✅ MongoDB connected – all API features active'))
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err.message);
-    console.error('📌 Fix: Set MONGODB_URI in .env to your MongoDB Atlas connection string.');
-    console.error('   Free Atlas cluster: https://www.mongodb.com/atlas/database\n');
+    if (err.message.includes('bad auth')) {
+      console.error('📌 Fix: Check your database username and password in MONGODB_URI.');
+    } else if (err.message.includes('querySrv ENOTFOUND')) {
+      console.error('📌 Fix: Ensure your server has internet access and DNS is resolving correctly.');
+    } else {
+      console.error('📌 Fix: Ensure your IP address is whitelisted in MongoDB Atlas Network Access.');
+    }
   });
