@@ -13,11 +13,11 @@
     },
     {
       "src": "/uploads/(.*)",
-      "dest": "server.js"
+      "dest": "/uploads/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "public/$1",
+      "dest": "/public/$1",
       "check": true
     },
     {

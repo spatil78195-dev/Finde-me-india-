@@ -70,3 +70,5 @@ mongoose.connect(mongoURI, {
       console.error('📌 Fix: Ensure your IP address is whitelisted in MongoDB Atlas Network Access.');
     }
   });
+
+module.exports = app;
