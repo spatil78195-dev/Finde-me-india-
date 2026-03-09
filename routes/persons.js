@@ -6,17 +6,18 @@ const QRCode = require('qrcode');
 const MissingPerson = require('../models/MissingPerson');
 const { verifyToken } = require('../middleware/auth');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
-});
+const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // POST /api/persons - add missing person
 router.post('/', verifyToken, upload.single('photo'), async (req, res) => {
   try {
     const { name, age, gender, lastSeenLocation, date, contact, description, helplineNumber } = req.body;
-    const photo = req.file ? req.file.filename : null;
+    let photo = null;
+    if (req.file) {
+      const b64 = Buffer.from(req.file.buffer).toString('base64');
+      photo = `data:${req.file.mimetype};base64,${b64}`;
+    }
 
     const person = await MissingPerson.create({
       name, age, gender, lastSeenLocation, date, contact, description,
@@ -81,7 +82,7 @@ router.get('/stats', async (req, res) => {
 // GET /api/persons/my - user's own submissions
 router.get('/my', verifyToken, async (req, res) => {
   try {
-    const persons = await MissingPerson.find({ addedBy: req.user.id }).sort({ createdAt: -1 });
+    const persons = await MissingPerson.find({}).sort({ createdAt: -1 });
     res.json(persons);
   } catch (err) {
     res.status(500).json({ message: err.message });

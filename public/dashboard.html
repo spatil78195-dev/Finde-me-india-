@@ -11,8 +11,8 @@
 
   <div class="page-header">
     <div class="container">
-      <h1>📋 My Dashboard</h1>
-      <p>Track the status of cases you have submitted.</p>
+      <h1>📋 Cases Dashboard</h1>
+      <p>Track the status of all submitted cases.</p>
     </div>
   </div>
 
@@ -28,7 +28,7 @@
     </div>
 
     <div class="flex-between mb-3">
-      <h2 style="font-size:1.2rem;font-weight:700;">My Submitted Cases</h2>
+      <h2 style="font-size:1.2rem;font-weight:700;">All Submitted Cases</h2>
       <a href="/add-person.html" class="btn btn-primary btn-sm">➕ Add New Case</a>
     </div>
 
@@ -61,7 +61,7 @@
 
     async function loadMyCases() {
       try {
-        const cases = await api.persons.my();
+        const cases = await api.persons.list('?status=all');
         // Stats
         document.getElementById('myTotal').textContent = cases.length;
         document.getElementById('myPending').textContent = cases.filter(c => c.status === 'pending').length;
@@ -77,7 +77,7 @@
           <tr>
             <td>
               <div style="display:flex;align-items:center;gap:10px;">
-                ${p.photo ? `<img src="/uploads/${p.photo}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;" />` : '<div style="width:36px;height:36px;background:#dbeafe;border-radius:6px;display:flex;align-items:center;justify-content:center;">👤</div>'}
+                ${p.photo ? `<img src="${photoUrl(p.photo)}" style="width:36px;height:36px;object-fit:cover;border-radius:6px;" />` : '<div style="width:36px;height:36px;background:#dbeafe;border-radius:6px;display:flex;align-items:center;justify-content:center;">👤</div>'}
                 <span style="font-weight:600;">${p.name}</span>
               </div>
             </td>

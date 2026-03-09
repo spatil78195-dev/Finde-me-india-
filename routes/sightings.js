@@ -5,17 +5,18 @@ const path = require('path');
 const Sighting = require('../models/Sighting');
 const { verifyToken } = require('../middleware/auth');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, 'uploads/'),
-  filename: (req, file, cb) => cb(null, 'sight_' + Date.now() + path.extname(file.originalname))
-});
+const storage = multer.memoryStorage();
 const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 // POST /api/sightings/:personId - report a sighting
 router.post('/:personId', upload.single('photo'), async (req, res) => {
   try {
     const { location, message, reporterName, reporterPhone } = req.body;
-    const photo = req.file ? req.file.filename : null;
+    let photo = null;
+    if (req.file) {
+      const b64 = Buffer.from(req.file.buffer).toString('base64');
+      photo = `data:${req.file.mimetype};base64,${b64}`;
+    }
     const sighting = await Sighting.create({
       personId: req.params.personId,
       location,

@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -116,7 +116,7 @@
           <tr id="row_${p._id}">
             <td>
               <div style="display:flex;align-items:center;gap:10px;">
-                ${p.photo ? `<img src="/uploads/${p.photo}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" />` : '<div style="width:40px;height:40px;background:#dbeafe;border-radius:6px;display:flex;align-items:center;justify-content:center;">👤</div>'}
+                ${p.photo ? `<img src="${photoUrl(p.photo)}" style="width:40px;height:40px;object-fit:cover;border-radius:6px;" />` : '<div style="width:40px;height:40px;background:#dbeafe;border-radius:6px;display:flex;align-items:center;justify-content:center;">👤</div>'}
                 <span style="font-weight:600;">${p.name}</span>
               </div>
             </td>

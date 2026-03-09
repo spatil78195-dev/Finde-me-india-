@@ -166,7 +166,7 @@
         container.innerHTML = persons.map(p => `
           <div class="print-card">
             ${p.photo ? 
-              `<img src="/uploads/${p.photo}" class="print-photo" alt="${p.name}" onerror="this.src='';" />` : 
+              `<img src="${photoUrl(p.photo)}" class="print-photo" alt="${p.name}" onerror="this.src='';" />` : 
               `<div class="print-photo-placeholder">👤</div>`
             }
             <div class="print-details">

@@ -192,7 +192,7 @@
         grid.innerHTML = persons.map(p => `
           <div class="card person-card fade-in" onclick="location.href='/detail.html?id=${p._id}'">
             <div class="person-card-img">
-              ${p.photo ? `<img src="/uploads/${p.photo}" alt="${p.name}" />` : '👤'}
+              ${p.photo ? `<img src="${photoUrl(p.photo)}" alt="${p.name}" />` : '👤'}
             </div>
             <div class="person-card-body">
               <div class="flex-between mb-2">

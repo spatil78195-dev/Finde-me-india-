@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
@@ -40,7 +40,7 @@
 
     function renderPerson(p) {
       const photoHtml = p.photo
-        ? `<img src="/uploads/${p.photo}" class="detail-photo" alt="${p.name}" />`
+        ? `<img src="${photoUrl(p.photo)}" class="detail-photo" alt="${p.name}" />`
         : `<div class="detail-photo-placeholder">👤</div>`;
 
       document.title = `${p.name} — Find Me India`;
@@ -148,7 +148,7 @@
             <div style="font-size:0.78rem;color:var(--text-muted);margin-top:6px;">
               Reported by ${s.reporterName || 'Anonymous'} · ${formatDate(s.createdAt)}
             </div>
-            ${s.photo ? `<img src="/uploads/${s.photo}" style="max-height:120px;border-radius:6px;margin-top:8px;" />` : ''}
+            ${s.photo ? `<img src="${photoUrl(s.photo)}" style="max-height:120px;border-radius:6px;margin-top:8px;" />` : ''}
           </div>`).join('');
       } catch {}
     }

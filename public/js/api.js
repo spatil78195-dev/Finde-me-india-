@@ -102,12 +102,20 @@ function renderNavbar(activePage = '') {
         <div class="brand-icon">🔍</div>
         Find Me India
       </a>
-      <nav class="navbar-nav">${linksHTML}</nav>
-      <div class="navbar-actions">
-        <div id="authNavArea">${authArea}</div>
+      <div class="hamburger" onclick="toggleMobileMenu()">☰</div>
+      <div class="nav-content" id="mobileNavContent">
+        <nav class="navbar-nav">${linksHTML}</nav>
+        <div class="navbar-actions">
+          <div id="authNavArea">${authArea}</div>
+        </div>
       </div>`;
   }
 }
+
+window.toggleMobileMenu = function() {
+  const nav = document.getElementById('mobileNavContent');
+  if (nav) nav.classList.toggle('active');
+};
 
 function logout() {
   clearAuth();
@@ -144,5 +152,6 @@ function getParamId() {
 }
 function photoUrl(filename) {
   if (!filename) return null;
+  if (filename.startsWith('data:')) return filename;
   return `/uploads/${filename}`;
 }
