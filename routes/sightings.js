@@ -15,7 +15,14 @@ router.post('/:personId', upload.single('photo'), async (req, res) => {
     let photo = null;
     if (req.file) {
       const b64 = Buffer.from(req.file.buffer).toString('base64');
-      photo = `data:${req.file.mimetype};base64,${b64}`;
+      const header = req.file.buffer.subarray(0, 16).toString('utf8');
+      let mime = req.file.mimetype;
+      if (header.includes('ftypavif')) mime = 'image/avif';
+      else if (header.includes('ftypheic')) mime = 'image/heic';
+      else if (req.file.buffer[0] === 0xFF && req.file.buffer[1] === 0xD8) mime = 'image/jpeg';
+      else if (req.file.buffer[0] === 0x89 && req.file.buffer[1] === 0x50) mime = 'image/png';
+      
+      photo = `data:${mime};base64,${b64}`;
     }
     const sighting = await Sighting.create({
       personId: req.params.personId,
