@@ -56,18 +56,22 @@ mongoose.set('bufferCommands', false);
 const mongoURI = process.env.MONGODB_URI || "mongodb://localhost:27017/findmeindia";
 
 mongoose.connect(mongoURI, {
-  serverSelectionTimeoutMS: 15000, // Timeout after 15s instead of 30s
-  socketTimeoutMS: 45000, // Close sockets after 45s of inactivity
+  serverSelectionTimeoutMS: 15000, 
+  socketTimeoutMS: 45000, 
 })
   .then(() => console.log('✅ MongoDB connected – all API features active'))
   .catch((err) => {
     console.error('❌ MongoDB connection error:', err.message);
+    console.error('🔍 Troubleshooting Info:');
+    console.error('- MONGODB_URI starts with:', mongoURI ? mongoURI.substring(0, 15) + '...' : 'undefined');
+    
     if (err.message.includes('bad auth')) {
       console.error('📌 Fix: Check your database username and password in MONGODB_URI.');
     } else if (err.message.includes('querySrv ENOTFOUND')) {
-      console.error('📌 Fix: Ensure your server has internet access and DNS is resolving correctly.');
+      console.error('📌 Fix: Could not find the database host. Check your connection string.');
     } else {
-      console.error('📌 Fix: Ensure your IP address is whitelisted in MongoDB Atlas Network Access.');
+      console.error('📌 Fix: Ensure your IP address is whitelisted in MongoDB Atlas Network Access (0.0.0.0/0 for Vercel).');
+      console.error('📌 Fix: Ensure MONGODB_URI environment variable is set in your Vercel Project Settings.');
     }
   });
 

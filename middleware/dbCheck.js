@@ -6,9 +6,16 @@ const mongoose = require('mongoose');
  */
 const requireDB = (req, res, next) => {
   if (mongoose.connection.readyState !== 1) {
-    console.error(`[DB-GUARD] Rejected request to ${req.originalUrl} - MongoDB state: ${mongoose.connection.readyState}`);
+    const status = mongoose.connection.readyState === 2 ? 'Connecting...' : 'Disconnected';
+    console.error(`[DB-GUARD] Rejected request to ${req.originalUrl} - Status: ${status}`);
+    
     return res.status(503).json({
-      message: '⚠️ Database not connected. Our team is working on resolving this server issue.'
+      message: '⚠️ Database not connected.',
+      troubleshooting: [
+        'Check if MONGODB_URI is added to Vercel Environment Variables.',
+        'Ensure 0.0.0.0/0 is whitelisted in MongoDB Atlas Network Access.',
+        'Wait a moment and refresh; connection may be initializing.'
+      ]
     });
   }
   next();
