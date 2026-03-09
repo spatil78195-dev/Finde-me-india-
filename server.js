@@ -11,8 +11,17 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Define MIME types for better browser support
+express.static.mime.define({ 'image/avif': ['avif'] });
+
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'), {
+  setHeaders: (res, path) => {
+    if (path.endsWith('.avif')) {
+      res.setHeader('Content-Type', 'image/avif');
+    }
+  }
+}));
 
 
 // ===== MongoDB FIX (Vercel working) =====
@@ -63,5 +72,12 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+
+const PORT = process.env.PORT || 5000;
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+}
 
 module.exports = app;
