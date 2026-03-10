@@ -68,7 +68,7 @@ const api = {
     markPrinted: (id) => apiRequest('PATCH', `/company/persons/${id}/printed`)
   },
   sightings: {
-    report: (personId, fd) => apiRequest('POST', `/sightings/${personId}`, fd, true),
+    report: (personId, data) => apiRequest('POST', `/sightings/${personId}`, data, false),
     forPerson: (personId) => apiRequest('GET', `/sightings/person/${personId}`)
   }
 };

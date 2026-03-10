@@ -126,16 +126,29 @@
       const btn = document.getElementById('reportBtn');
       btn.innerHTML = '<span class="spinner"></span> Submitting…'; btn.disabled = true;
 
-      const fd = new FormData();
-      fd.append('location', document.getElementById('location').value);
-      fd.append('message', document.getElementById('message').value);
-      fd.append('reporterName', document.getElementById('reporterName').value);
-      fd.append('reporterPhone', document.getElementById('reporterPhone').value);
-      const photo = document.getElementById('sightingPhoto').files[0];
-      if (photo) fd.append('photo', photo);
+      // Read photo as base64 if provided
+      let photoBase64 = null;
+      const photoFile = document.getElementById('sightingPhoto').files[0];
+      if (photoFile) {
+        photoBase64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (ev) => resolve(ev.target.result);
+          reader.onerror = () => resolve(null);
+          reader.readAsDataURL(photoFile);
+        });
+      }
+
+      // Send as JSON — works reliably on Vercel (no multer needed)
+      const payload = {
+        location: document.getElementById('location').value,
+        message: document.getElementById('message').value,
+        reporterName: document.getElementById('reporterName').value,
+        reporterPhone: document.getElementById('reporterPhone').value,
+        photo: photoBase64
+      };
 
       try {
-        await api.sightings.report(personId, fd);
+        await api.sightings.report(personId, payload);
         document.getElementById('alertArea').innerHTML = `
           <div class="alert alert-success">
             ✅ <strong>Sighting reported successfully!</strong> Our admin team will review it. Thank you for helping!
