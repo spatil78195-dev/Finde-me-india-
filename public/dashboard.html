@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>My Dashboard — Find Me India</title>
   <link rel="stylesheet" href="/css/style.css" />
+  <style>
+    .action-btns { display:flex; gap:6px; flex-wrap:wrap; }
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:1000; align-items:center; justify-content:center; }
+    .modal-overlay.active { display:flex; }
+    .modal-box { background:#fff; border-radius:16px; padding:32px; max-width:400px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.25); animation:fadeUp 0.25s ease; }
+    @keyframes fadeUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+    .modal-title { font-size:1.2rem; font-weight:700; margin-bottom:12px; }
+    .modal-actions { display:flex; gap:10px; margin-top:20px; justify-content:flex-end; }
+    .btn-danger { background:#ef4444; color:#fff; border:none; padding:8px 20px; border-radius:8px; cursor:pointer; font-weight:600; transition:background 0.2s; }
+    .btn-danger:hover { background:#dc2626; }
+  </style>
 </head>
 <body>
   <nav id="navbar" class="navbar"></nav>
@@ -13,6 +24,18 @@
     <div class="container">
       <h1>📋 Cases Dashboard</h1>
       <p>Track the status of all submitted cases.</p>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay" id="deleteModal">
+    <div class="modal-box">
+      <div class="modal-title">🗑️ Delete Case?</div>
+      <p style="color:#4b5563;">Are you sure you want to delete this case? This action cannot be undone.</p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" onclick="closeDeleteModal()">Cancel</button>
+        <button class="btn-danger" id="confirmDeleteBtn">Yes, Delete</button>
+      </div>
     </div>
   </div>
 
@@ -57,12 +80,15 @@
   <script>
     renderNavbar('dashboard');
     if (!requireAuth()) {}
+
+    const currentUser = getUser();
+    let pendingDeleteId = null;
+
     loadMyCases();
 
     async function loadMyCases() {
       try {
         const cases = await api.persons.list('?status=all');
-        // Stats
         document.getElementById('myTotal').textContent = cases.length;
         document.getElementById('myPending').textContent = cases.filter(c => c.status === 'pending').length;
         document.getElementById('myVerified').textContent = cases.filter(c => ['verified','printed'].includes(c.status)).length;
@@ -73,7 +99,15 @@
           tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="icon">📋</div><h3>No cases submitted yet</h3><p>Add your first missing person report.</p><a href="/add-person.html" class="btn btn-primary mt-3">Report Now</a></div></td></tr>`;
           return;
         }
-        tbody.innerHTML = cases.map(p => `
+
+        tbody.innerHTML = cases.map(p => {
+          // Check ownership - addedBy can be a string ID or populated object
+          const addedById = p.addedBy && typeof p.addedBy === 'object' ? p.addedBy._id : p.addedBy;
+          const isOwner = currentUser && (addedById === currentUser._id || addedById === currentUser.id);
+          const isAdmin = currentUser && currentUser.role === 'admin';
+          const canEdit = (isOwner || isAdmin) && p.status === 'pending';
+
+          return `
           <tr>
             <td>
               <div style="display:flex;align-items:center;gap:10px;">
@@ -86,15 +120,48 @@
             <td>${formatDate(p.date)}</td>
             <td>${statusBadge(p.status)}</td>
             <td>
-              <a href="/detail.html?id=${p._id}" class="btn btn-ghost btn-sm">View →</a>
+              <div class="action-btns">
+                <a href="/detail.html?id=${p._id}" class="btn btn-ghost btn-sm">View →</a>
+                ${canEdit ? `<a href="/edit-person.html?id=${p._id}" class="btn btn-sm" style="background:#dbeafe;color:#1e40af;border:none;cursor:pointer;">✏️ Edit</a>` : ''}
+                ${canEdit ? `<button onclick="openDeleteModal('${p._id}')" class="btn btn-sm" style="background:#fee2e2;color:#b91c1c;border:none;cursor:pointer;">🗑️ Delete</button>` : ''}
+              </div>
             </td>
-          </tr>`).join('');
+          </tr>`;
+        }).join('');
       } catch (e) {
         showAlert(document.getElementById('alertArea'), e.message);
       }
     }
+
+    function openDeleteModal(id) {
+      pendingDeleteId = id;
+      document.getElementById('deleteModal').classList.add('active');
+    }
+    function closeDeleteModal() {
+      pendingDeleteId = null;
+      document.getElementById('deleteModal').classList.remove('active');
+      const btn = document.getElementById('confirmDeleteBtn');
+      btn.textContent = 'Yes, Delete'; btn.disabled = false;
+    }
+    async function confirmDelete() {
+      if (!pendingDeleteId) return;
+      const btn = document.getElementById('confirmDeleteBtn');
+      btn.textContent = 'Deleting…'; btn.disabled = true;
+      try {
+        await api.persons.delete(pendingDeleteId);
+        closeDeleteModal();
+        showAlert(document.getElementById('alertArea'), 'Case deleted successfully.', 'success');
+        loadMyCases();
+      } catch (err) {
+        closeDeleteModal();
+        showAlert(document.getElementById('alertArea'), err.message);
+      }
+    }
+
+    document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+      if (e.target === this) closeDeleteModal();
+    });
   </script>
 </body>
 </html>
-
-

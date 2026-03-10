@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Edit Case — Find Me India</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+  <nav id="navbar" class="navbar"></nav>
+
+  <div class="page-header">
+    <div class="container">
+      <h1>✏️ Edit Case</h1>
+      <p>Update the missing person's details below.</p>
+    </div>
+  </div>
+
+  <div class="container" style="padding-top:32px; max-width:800px;">
+    <div id="alertArea"></div>
+    <div class="card">
+      <div class="card-header">Edit Missing Person Information</div>
+      <div class="card-body">
+        <div id="loadingState" style="text-align:center;padding:40px;">
+          <div class="spinner" style="border-color:rgba(26,86,219,0.2);border-top-color:var(--primary);margin:0 auto;"></div>
+          <p style="margin-top:12px;color:#6b7280;">Loading case details…</p>
+        </div>
+        <form id="editPersonForm" onsubmit="handleSubmit(event)" style="display:none;">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Full Name *</label>
+              <input type="text" id="name" class="form-control" placeholder="Enter full name" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Age *</label>
+              <input type="number" id="age" class="form-control" placeholder="Age in years" required min="1" max="120" />
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Gender *</label>
+              <select id="gender" class="form-control" required>
+                <option value="">Select gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Date Last Seen *</label>
+              <input type="date" id="date" class="form-control" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Last Seen Location *</label>
+            <input type="text" id="lastSeenLocation" class="form-control" placeholder="e.g. Connaught Place, New Delhi" required />
+          </div>
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label">Contact Number *</label>
+              <input type="tel" id="contact" class="form-control" placeholder="10-digit mobile number" required />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Helpline Number</label>
+              <input type="text" id="helplineNumber" class="form-control" value="1800-180-1234" />
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Description</label>
+            <textarea id="description" class="form-control" placeholder="Physical description, clothing worn, any other helpful details…" rows="4"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Update Photo <span style="color:#9ca3af;font-size:0.82rem;">(optional — leave empty to keep existing)</span></label>
+            <div class="upload-area" id="uploadArea" onclick="document.getElementById('photoInput').click()">
+              <input type="file" id="photoInput" accept="image/*" onchange="previewPhoto(event)" />
+              <div id="uploadPlaceholder">
+                <div style="font-size:2.5rem;margin-bottom:8px;">📷</div>
+                <div style="font-weight:600;">Click to upload new photo</div>
+                <div class="text-muted" style="font-size:0.82rem;margin-top:4px;">JPG, PNG, WEBP • Max 5MB</div>
+              </div>
+              <img id="photoPreview" class="upload-preview hidden" alt="Preview" />
+            </div>
+          </div>
+
+          <div style="display:flex;gap:12px;margin-top:24px;">
+            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn" style="flex:1;">
+              💾 Save Changes
+            </button>
+            <a href="/dashboard.html" class="btn btn-ghost btn-lg">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script>
+    renderNavbar('dashboard');
+    if (!requireAuth()) {}
+
+    const caseId = getParamId();
+    if (!caseId) { location.href = '/dashboard.html'; }
+
+    // Load existing case data
+    (async () => {
+      try {
+        const p = await api.persons.get(caseId);
+        // Fill form
+        document.getElementById('name').value = p.name || '';
+        document.getElementById('age').value = p.age || '';
+        document.getElementById('gender').value = p.gender || '';
+        document.getElementById('lastSeenLocation').value = p.lastSeenLocation || '';
+        document.getElementById('contact').value = p.contact || '';
+        document.getElementById('helplineNumber').value = p.helplineNumber || '1800-180-1234';
+        document.getElementById('description').value = p.description || '';
+        // Date field needs YYYY-MM-DD format
+        if (p.date) {
+          const d = new Date(p.date);
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          document.getElementById('date').value = `${yyyy}-${mm}-${dd}`;
+        }
+        // Show existing photo as preview
+        if (p.photo) {
+          const preview = document.getElementById('photoPreview');
+          preview.src = photoUrl(p.photo);
+          preview.classList.remove('hidden');
+          document.getElementById('uploadPlaceholder').classList.add('hidden');
+        }
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('editPersonForm').style.display = '';
+      } catch (err) {
+        showAlert(document.getElementById('alertArea'), 'Failed to load case: ' + err.message);
+      }
+    })();
+
+    function previewPhoto(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const preview = document.getElementById('photoPreview');
+        preview.src = ev.target.result;
+        preview.classList.remove('hidden');
+        document.getElementById('uploadPlaceholder').classList.add('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Drag and drop
+    const ua = document.getElementById('uploadArea');
+    ua.addEventListener('dragover', e => { e.preventDefault(); ua.classList.add('drag-over'); });
+    ua.addEventListener('dragleave', () => ua.classList.remove('drag-over'));
+    ua.addEventListener('drop', e => {
+      e.preventDefault(); ua.classList.remove('drag-over');
+      const file = e.dataTransfer.files[0];
+      if (file) {
+        document.getElementById('photoInput').files = e.dataTransfer.files;
+        previewPhoto({ target: { files: [file] } });
+      }
+    });
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      btn.innerHTML = '<span class="spinner"></span> Saving…'; btn.disabled = true;
+
+      const fd = new FormData();
+      fd.append('name', document.getElementById('name').value);
+      fd.append('age', document.getElementById('age').value);
+      fd.append('gender', document.getElementById('gender').value);
+      fd.append('lastSeenLocation', document.getElementById('lastSeenLocation').value);
+      fd.append('date', document.getElementById('date').value);
+      fd.append('contact', document.getElementById('contact').value);
+      fd.append('description', document.getElementById('description').value);
+      fd.append('helplineNumber', document.getElementById('helplineNumber').value);
+      const photoFile = document.getElementById('photoInput').files[0];
+      if (photoFile) fd.append('photo', photoFile);
+
+      try {
+        await api.persons.update(caseId, fd);
+        showAlert(document.getElementById('alertArea'), '✅ Case updated successfully! Redirecting…', 'success');
+        setTimeout(() => location.href = '/dashboard.html', 1800);
+      } catch (err) {
+        showAlert(document.getElementById('alertArea'), err.message);
+        btn.innerHTML = '💾 Save Changes'; btn.disabled = false;
+      }
+    }
+  </script>
+</body>
+</html>

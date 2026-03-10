@@ -49,8 +49,11 @@ const api = {
     list: (q = '') => apiRequest('GET', `/persons${q}`),
     stats: () => apiRequest('GET', '/persons/stats'),
     my: () => apiRequest('GET', '/persons/my'),
-    get: (id) => apiRequest('GET', `/persons/${id}`)
+    get: (id) => apiRequest('GET', `/persons/${id}`),
+    update: (id, fd) => apiRequest('PUT', `/persons/${id}`, fd, true),
+    delete: (id) => apiRequest('DELETE', `/persons/${id}`)
   },
+
   admin: {
     persons: (q = '') => apiRequest('GET', `/admin/persons${q}`),
     companies: () => apiRequest('GET', '/admin/companies'),
