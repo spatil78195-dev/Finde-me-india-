@@ -107,11 +107,11 @@
         </div>
       </div>
 
-      <!-- STEP 2: Enter Transaction ID -->
+      <!-- STEP 2: Enter Transaction ID + Screenshot -->
       <div id="payStep2" style="display:none;">
         <div style="font-size:2rem;margin-bottom:2px;">🔐</div>
-        <div class="pay-header">Enter Transaction ID</div>
-        <div class="pay-sub">Enter the Transaction / UTR ID you received after payment</div>
+        <div class="pay-header">Verify Your Payment</div>
+        <div class="pay-sub">Both UTR ID and payment screenshot are required to submit</div>
 
         <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin:10px 0;">
           <span style="background:#e0e7ff;color:#3730a3;font-size:0.75rem;font-weight:700;padding:4px 10px;border-radius:20px;">STEP 2 of 2</span>
@@ -121,19 +121,46 @@
           📌 <strong>Where to find UTR?</strong> After payment, open your UPI app → Transaction History → you'll see a <em>UTR / Reference / Transaction ID</em> (usually 12 digits).
         </div>
 
-        <div style="text-align:left;margin-bottom:16px;">
+        <!-- UTR Input -->
+        <div style="text-align:left;margin-bottom:14px;">
           <label style="font-weight:700;font-size:0.88rem;color:#1e3a8a;display:block;margin-bottom:6px;">
-            Transaction ID / UTR Number *
+            🔢 Transaction ID / UTR Number *
           </label>
           <input
             type="text"
             id="utrInput"
-            placeholder="e.g. 123456789012"
+            placeholder="Enter 12-digit UTR (e.g. 508312345678)"
             maxlength="30"
-            style="width:100%;padding:12px 14px;border:2px solid #3b82f6;border-radius:10px;font-size:1rem;outline:none;box-sizing:border-box;letter-spacing:1px;font-weight:600;"
-            oninput="validateUtr(this)"
+            style="width:100%;padding:12px 14px;border:2px solid #d1d5db;border-radius:10px;font-size:1rem;outline:none;box-sizing:border-box;letter-spacing:1px;font-weight:600;"
+            oninput="checkStep2Ready()"
           />
-          <div id="utrError" style="color:#ef4444;font-size:0.8rem;margin-top:5px;display:none;">⚠️ Please enter a valid Transaction / UTR ID (minimum 8 characters)</div>
+          <div id="utrError" style="color:#ef4444;font-size:0.8rem;margin-top:4px;display:none;">⚠️ UTR must be at least 8 digits (numbers only)</div>
+        </div>
+
+        <!-- Screenshot Upload -->
+        <div style="text-align:left;margin-bottom:16px;">
+          <label style="font-weight:700;font-size:0.88rem;color:#1e3a8a;display:block;margin-bottom:6px;">
+            📸 Payment Screenshot *
+          </label>
+          <div id="screenshotArea"
+            onclick="document.getElementById('screenshotInput').click()"
+            style="border:2px dashed #6366f1;border-radius:10px;padding:18px;text-align:center;cursor:pointer;background:#f5f3ff;transition:background 0.2s;"
+            onmouseover="this.style.background='#ede9fe'" onmouseout="this.style.background='#f5f3ff'">
+            <input type="file" id="screenshotInput" accept="image/*" style="display:none;" onchange="onScreenshotSelected(event)" />
+            <div id="screenshotPlaceholder">
+              <div style="font-size:2rem;margin-bottom:4px;">🖼️</div>
+              <div style="font-weight:600;color:#4f46e5;font-size:0.9rem;">Click to upload payment screenshot</div>
+              <div style="color:#9ca3af;font-size:0.78rem;margin-top:4px;">JPG, PNG, WEBP • Max 5MB</div>
+            </div>
+            <img id="screenshotPreview" style="display:none;max-width:100%;max-height:180px;border-radius:8px;margin-top:8px;" alt="Screenshot preview" />
+          </div>
+          <div id="screenshotError" style="color:#ef4444;font-size:0.8rem;margin-top:4px;display:none;">⚠️ Please upload your payment screenshot</div>
+        </div>
+
+        <!-- Validation summary -->
+        <div id="step2Checklist" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:0.82rem;">
+          <div id="chkUtr" style="color:#9ca3af;">⬜ UTR / Transaction ID entered</div>
+          <div id="chkScreenshot" style="color:#9ca3af;margin-top:4px;">⬜ Payment screenshot uploaded</div>
         </div>
 
         <div class="pay-actions">
@@ -300,9 +327,21 @@
     function resetPayModal() {
       document.getElementById('payStep1').style.display = '';
       document.getElementById('payStep2').style.display = 'none';
+      // Reset UTR
       const utrInput = document.getElementById('utrInput');
-      if (utrInput) { utrInput.value = ''; utrInput.style.borderColor = '#3b82f6'; }
+      if (utrInput) { utrInput.value = ''; utrInput.style.borderColor = '#d1d5db'; }
       document.getElementById('utrError').style.display = 'none';
+      // Reset screenshot
+      document.getElementById('screenshotInput').value = '';
+      document.getElementById('screenshotPreview').style.display = 'none';
+      document.getElementById('screenshotPlaceholder').style.display = '';
+      document.getElementById('screenshotError').style.display = 'none';
+      // Reset checklist
+      document.getElementById('chkUtr').style.color = '#9ca3af';
+      document.getElementById('chkUtr').textContent = '⬜ UTR / Transaction ID entered';
+      document.getElementById('chkScreenshot').style.color = '#9ca3af';
+      document.getElementById('chkScreenshot').textContent = '⬜ Payment screenshot uploaded';
+      // Reset submit button
       const btn = document.getElementById('finalSubmitBtn');
       btn.disabled = true; btn.style.opacity = '0.5'; btn.style.cursor = 'not-allowed';
       btn.innerHTML = '🚀 Submit Report';
@@ -319,41 +358,99 @@
       document.getElementById('payStep1').style.display = '';
     }
 
-    function validateUtr(input) {
-      const val = input.value.trim();
+    // Screenshot selected handler
+    function onScreenshotSelected(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        document.getElementById('screenshotError').style.display = 'block';
+        document.getElementById('screenshotError').textContent = '⚠️ File too large. Max 5MB allowed.';
+        e.target.value = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const prev = document.getElementById('screenshotPreview');
+        prev.src = ev.target.result;
+        prev.style.display = 'block';
+        document.getElementById('screenshotPlaceholder').style.display = 'none';
+        document.getElementById('screenshotError').style.display = 'none';
+        checkStep2Ready();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Combined validation — both UTR + screenshot required
+    function checkStep2Ready() {
+      const utr = document.getElementById('utrInput').value.trim();
+      const screenshot = document.getElementById('screenshotInput').files[0];
       const btn = document.getElementById('finalSubmitBtn');
-      if (val.length >= 8) {
-        input.style.borderColor = '#22c55e';
-        document.getElementById('utrError').style.display = 'none';
+
+      // Validate UTR: digits only, min 8 chars
+      const utrValid = /^\d{8,}$/.test(utr);
+      const chkUtrEl = document.getElementById('chkUtr');
+      const utrErr = document.getElementById('utrError');
+      const utrInput = document.getElementById('utrInput');
+
+      if (utr.length === 0) {
+        utrInput.style.borderColor = '#d1d5db';
+        utrErr.style.display = 'none';
+        chkUtrEl.style.color = '#9ca3af'; chkUtrEl.textContent = '⬜ UTR / Transaction ID entered';
+      } else if (utrValid) {
+        utrInput.style.borderColor = '#22c55e';
+        utrErr.style.display = 'none';
+        chkUtrEl.style.color = '#16a34a'; chkUtrEl.textContent = '✅ UTR / Transaction ID entered';
+      } else {
+        utrInput.style.borderColor = '#ef4444';
+        utrErr.style.display = 'block';
+        chkUtrEl.style.color = '#ef4444'; chkUtrEl.textContent = '❌ UTR must be digits only (min 8)';
+      }
+
+      // Screenshot check
+      const chkSsEl = document.getElementById('chkScreenshot');
+      if (screenshot) {
+        chkSsEl.style.color = '#16a34a'; chkSsEl.textContent = '✅ Payment screenshot uploaded';
+      } else {
+        chkSsEl.style.color = '#9ca3af'; chkSsEl.textContent = '⬜ Payment screenshot uploaded';
+      }
+
+      // Enable submit if both are valid
+      if (utrValid && screenshot) {
         btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer';
       } else {
-        input.style.borderColor = val.length > 0 ? '#f59e0b' : '#3b82f6';
         btn.disabled = true; btn.style.opacity = '0.5'; btn.style.cursor = 'not-allowed';
       }
     }
 
-    // FINAL STEP: UTR verified → submit the report
+    // FINAL STEP: Both UTR + screenshot verified → submit the report
     async function submitAfterPayment() {
       if (!pendingFormData) return;
 
       const utr = document.getElementById('utrInput').value.trim();
-      if (utr.length < 8) {
+      const screenshotFile = document.getElementById('screenshotInput').files[0];
+
+      if (!/^\d{8,}$/.test(utr)) {
         document.getElementById('utrError').style.display = 'block';
         return;
       }
+      if (!screenshotFile) {
+        document.getElementById('screenshotError').style.display = 'block';
+        return;
+      }
 
-      // Attach UTR to the form data as extra info
+      // Attach UTR and screenshot to FormData
       pendingFormData.append('paymentUtr', utr);
+      pendingFormData.append('paymentScreenshot', screenshotFile);
 
       const btn = document.getElementById('finalSubmitBtn');
-      btn.innerHTML = '<span class="spinner"></span> Submit Ho Rahi Hai…'; btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Submitting Report…'; btn.disabled = true;
 
       try {
         const person = await api.persons.add(pendingFormData);
         document.getElementById('payModal').classList.remove('active');
         resetPayModal();
         showAlert(document.getElementById('alertArea'),
-          `✅ Report safaltapoorvak submit ho gayi! Status: <strong>Pending Review</strong>. Case ID: ${person._id}`, 'success');
+          `✅ Report submitted successfully! Status: <strong>Pending Review</strong>. Case ID: ${person._id}`, 'success');
         document.getElementById('addPersonForm').reset();
         document.getElementById('photoPreview').classList.add('hidden');
         document.getElementById('uploadPlaceholder').classList.remove('hidden');
@@ -371,6 +468,7 @@
     document.getElementById('payModal').addEventListener('click', function(e) {
       if (e.target === this) closePayModal();
     });
+
   </script>
 </body>
 </html>

@@ -101,11 +101,8 @@
         }
 
         tbody.innerHTML = cases.map(p => {
-          // Check ownership - addedBy can be a string ID or populated object
-          const addedById = p.addedBy && typeof p.addedBy === 'object' ? p.addedBy._id : p.addedBy;
-          const isOwner = currentUser && (addedById === currentUser._id || addedById === currentUser.id);
-          const isAdmin = currentUser && currentUser.role === 'admin';
-          const canEdit = (isOwner || isAdmin) && p.status === 'pending';
+          // Show Edit/Delete for ALL pending cases
+          const canEdit = p.status === 'pending';
 
           return `
           <tr>
